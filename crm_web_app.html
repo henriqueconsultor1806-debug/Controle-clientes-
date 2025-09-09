@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini-CRM Henrique</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; }
+        h1 { text-align: center; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #333; color: white; }
+        tr.pago { background-color: #c6efce; }
+        tr.proximo { background-color: #ffeb9c; }
+        tr.vencido { background-color: #ffc7ce; }
+        input, select, button { padding: 6px; margin: 5px; }
+        button { cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Mini-CRM Henrique</h1>
+    <div>
+        <input type="text" id="nome" placeholder="Nome do Cliente">
+        <input type="text" id="telefone" placeholder="Telefone">
+        <input type="date" id="data">
+        <input type="number" id="valor" placeholder="Valor Total">
+        <select id="status">
+            <option value="Aguardando">Aguardando</option>
+            <option value="Pago">Pago</option>
+            <option value="Reagendado">Reagendado</option>
+        </select>
+        <input type="number" id="comissao" placeholder="Comissão %">
+        <input type="text" id="obs" placeholder="Observação">
+        <button onclick="adicionarCliente()">Adicionar Cliente</button>
+    </div>
+    <table id="tabela">
+        <thead>
+            <tr>
+                <th>Nome</th>
+                <th>Telefone</th>
+                <th>Data</th>
+                <th>Valor Total</th>
+                <th>Status</th>
+                <th>Comissão</th>
+                <th>Valor a Receber</th>
+                <th>Observação</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+    <h2>Total a Receber: R$ <span id="totalReceber">0.00</span></h2>
+    <h2>Total Comissões: R$ <span id="totalComissao">0.00</span></h2>
+
+    <script>
+        let clientes = [];
+
+        function atualizarTabela() {
+            const tbody = document.querySelector('#tabela tbody');
+            tbody.innerHTML = '';
+            let totalReceber = 0;
+            let totalComissao = 0;
+
+            clientes.forEach((c, index) => {
+                const tr = document.createElement('tr');
+                const hoje = new Date();
+                const dataCliente = new Date(c.data);
+
+                if(c.status === 'Pago') tr.classList.add('pago');
+                else if(dataCliente < hoje) tr.classList.add('vencido');
+                else if((dataCliente - hoje)/(1000*60*60*24) <= 2) tr.classList.add('proximo');
+
+                const valorReceber = c.status === 'Pago' ? 0 : c.valor - (c.valor * c.comissao/100);
+                totalReceber += valorReceber;
+                totalComissao += c.valor * c.comissao/100;
+
+                tr.innerHTML = `
+                    <td>${c.nome}</td>
+                    <td>${c.telefone}</td>
+                    <td>${c.data}</td>
+                    <td>R$ ${c.valor.toFixed(2)}</td>
+                    <td>${c.status}</td>
+                    <td>${c.comissao}%</td>
+                    <td>R$ ${valorReceber.toFixed(2)}</td>
+                    <td>${c.obs}</td>
+                    <td>
+                        <button onclick="editarCliente(${index})">Editar</button>
+                        <button onclick="removerCliente(${index})">Remover</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('totalReceber').innerText = totalReceber.toFixed(2);
+            document.getElementById('totalComissao').innerText = totalComissao.toFixed(2);
+            localStorage.setItem('clientes', JSON.stringify(clientes));
+        }
+
+        function adicionarCliente() {
+            const cliente = {
+                nome: document.getElementById('nome').value,
+                telefone: document.getElementById('telefone').value,
+                data: document.getElementById('data').value,
+                valor: parseFloat(document.getElementById('valor').value),
+                status: document.getElementById('status').value,
+                comissao: parseFloat(document.getElementById('comissao').value),
+                obs: document.getElementById('obs').value
+            };
+
+            if(!cliente.nome || !cliente.valor || !cliente.data) { alert('Preencha os campos obrigatórios'); return; }
+
+            clientes.push(cliente);
+            atualizarTabela();
+
+            document.getElementById('nome').value = '';
+            document.getElementById('telefone').value = '';
+            document.getElementById('data').value = '';
+            document.getElementById('valor').value = '';
+            document.getElementById('status').value = 'Aguardando';
+            document.getElementById('comissao').value = '';
+            document.getElementById('obs').value = '';
+        }
+
+        function editarCliente(index) {
+            const c = clientes[index];
+            document.getElementById('nome').value = c.nome;
+            document.getElementById('telefone').value = c.telefone;
+            document.getElementById('data').value = c.data;
+            document.getElementById('valor').value = c.valor;
+            document.getElementById('status').value = c.status;
+            document.getElementById('comissao').value = c.comissao;
+            document.getElementById('obs').value = c.obs;
+
+            removerCliente(index);
+        }
+
+        function removerCliente(index) {
+            clientes.splice(index, 1);
+            atualizarTabela();
+        }
+
+        window.onload = function() {
+            const saved = localStorage.getItem('clientes');
+            if(saved) { clientes = JSON.parse(saved); }
+            atualizarTabela();
+        };
+    </script>
+</body>
+</html>
